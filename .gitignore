@@ -144,6 +144,7 @@ tests/playwright/results/
 tests/playwright/.chrome-profile/
 tests/playwright/.hero-chrome-profile/
 tests/playwright/.demo-chrome-profile/
+tests/playwright/.carousel-chrome-profile/
 tests/playwright/run-log.csv
 tests/playwright/node_modules/
 screenshots/

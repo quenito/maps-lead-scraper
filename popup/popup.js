@@ -62,6 +62,7 @@ const cancelLicenseBtn = document.getElementById('cancelLicenseBtn');
 const confirmLicenseBtn = document.getElementById('confirmLicenseBtn');
 
 // State
+let currentEngine = null; // 'google' | 'bing' | null
 let isScrapin = false;
 let isExtractingEmails = false;
 let scrapedData = [];
@@ -100,7 +101,9 @@ let exportFields = {
   linkedinUrl: true,
   twitterUrl: true,
   socialSearchUrl: true,
-  googleMapsUrl: true
+  googleMapsUrl: true,
+  bingMapsUrl: true,
+  sourceEngine: true
 };
 
 // License State
@@ -415,9 +418,15 @@ fieldCheckboxes.forEach(checkbox => {
 function extractSearchQuery(url) {
   if (!url) return 'Unknown search';
   try {
-    const match = url.match(/\/maps\/search\/([^\/\?]+)/);
-    if (match) {
-      return decodeURIComponent(match[1].replace(/\+/g, ' '));
+    // Google Maps: /maps/search/query+here
+    const googleMatch = url.match(/\/maps\/search\/([^\/\?]+)/);
+    if (googleMatch) {
+      return decodeURIComponent(googleMatch[1].replace(/\+/g, ' '));
+    }
+    // Bing Maps: ?q=query+here or &q=query+here
+    const bingMatch = url.match(/[?&]q=([^&]+)/);
+    if (bingMatch) {
+      return decodeURIComponent(bingMatch[1].replace(/\+/g, ' '));
     }
   } catch (e) {}
   return 'Unknown search';
@@ -584,13 +593,23 @@ async function loadStoredData() {
   }
 }
 
-// Check if current tab is a valid Google Maps page
+// Detect which maps engine the current tab is on
+function detectEngine(url) {
+  if (!url) return null;
+  if (url.includes('google.com/maps')) return 'google';
+  if (url.includes('bing.com/maps')) return 'bing';
+  return null;
+}
+
+// Check if current tab is a valid maps page (Google Maps or Bing Maps)
 async function checkCurrentTabStatus() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    if (!tab.url || !tab.url.includes('google.com/maps')) {
-      showError('Please navigate to Google Maps search results');
+    currentEngine = detectEngine(tab?.url);
+
+    if (!currentEngine) {
+      showError('Please navigate to Google Maps or Bing Maps search results');
       startStopBtn.disabled = true;
       return;
     }
@@ -697,8 +716,9 @@ startStopBtn.addEventListener('click', async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    if (!tab.url || !tab.url.includes('google.com/maps')) {
-      showError('Please navigate to Google Maps search results');
+    const engine = detectEngine(tab?.url);
+    if (!engine) {
+      showError('Please navigate to Google Maps or Bing Maps search results');
       return;
     }
 
@@ -872,8 +892,8 @@ function convertToCSV(data) {
 
   // All possible headers in order (v2.1: added contactPageUrl, facebookUrl, instagramUrl, linkedinUrl, twitterUrl)
   const allHeaders = hasEmails
-    ? ['name', 'email', 'emailSource', 'emailVerificationStatus', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl']
-    : ['name', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl'];
+    ? ['name', 'email', 'emailSource', 'emailVerificationStatus', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl', 'bingMapsUrl', 'sourceEngine']
+    : ['name', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl', 'bingMapsUrl', 'sourceEngine'];
 
   // Filter headers based on exportFields selection (name is always included)
   const headers = allHeaders.filter(header => {

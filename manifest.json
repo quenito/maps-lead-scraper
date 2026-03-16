@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Google Maps Lead Scraper",
-  "version": "3.0.0",
-  "description": "Extract business leads and emails from Google Maps search results",
+  "name": "Maps Lead Scraper",
+  "version": "3.0.1",
+  "description": "Extract business leads and emails from Google Maps and Bing Maps search results",
   "permissions": [
     "activeTab",
     "storage",
@@ -11,6 +11,7 @@
   ],
   "host_permissions": [
     "https://www.google.com/maps/*",
+    "https://www.bing.com/maps/*",
     "<all_urls>"
   ],
   "action": {
@@ -29,6 +30,11 @@
     {
       "matches": ["https://www.google.com/maps/*"],
       "js": ["content/content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.bing.com/maps*"],
+      "js": ["content/bing-content.js"],
       "run_at": "document_idle"
     }
   ],

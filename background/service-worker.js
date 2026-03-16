@@ -1542,7 +1542,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Handle extension icon click when popup is not shown
 chrome.action.onClicked.addListener((tab) => {
-  if (tab.url && tab.url.includes('google.com/maps')) {
+  if (tab.url && (tab.url.includes('google.com/maps') || tab.url.includes('bing.com/maps'))) {
     chrome.tabs.sendMessage(tab.id, { action: 'getStatus' });
   }
 });

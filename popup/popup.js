@@ -25,14 +25,6 @@ const fieldsSection = document.getElementById('fieldsSection');
 const fieldCheckboxes = document.querySelectorAll('.field-checkbox input[type="checkbox"]');
 const notificationsCheckbox = document.getElementById('notificationsCheckbox');
 const socialSearchCheckbox = document.getElementById('socialSearchCheckbox');
-const exportSheetsBtn = document.getElementById('exportSheetsBtn');
-const sheetsModal = document.getElementById('sheetsModal');
-const closeModalBtn = document.getElementById('closeModalBtn');
-const cancelSheetsBtn = document.getElementById('cancelSheetsBtn');
-const confirmSheetsBtn = document.getElementById('confirmSheetsBtn');
-const appendOption = document.getElementById('appendOption');
-const sheetsStatus = document.getElementById('sheetsStatus');
-const sheetsStatusText = document.getElementById('sheetsStatusText');
 const cancelEmailBtn = document.getElementById('cancelEmailBtn');
 const clearResultsBtn = document.getElementById('clearResultsBtn');
 
@@ -56,7 +48,6 @@ const trialBanner = document.getElementById('trialBanner');
 const trialCount = document.getElementById('trialCount');
 const upgradeFromBanner = document.getElementById('upgradeFromBanner');
 const licenseBadge = document.getElementById('licenseBadge');
-const badgeTier = document.getElementById('badgeTier');
 const trialEndedSection = document.getElementById('trialEndedSection');
 const statusSection = document.getElementById('statusSection');
 const licenseKeyInput = document.getElementById('licenseKeyInput');
@@ -94,6 +85,7 @@ let exportFields = {
   name: true,      // Always required
   email: true,
   emailSource: true,
+  emailVerificationStatus: true,
   rating: true,
   reviewCount: true,
   category: true,
@@ -152,12 +144,8 @@ function updateLicenseUI() {
   if (licenseStatus.status === 'active') {
     // Licensed user - show badge
     licenseBadge.style.display = 'flex';
-    badgeTier.textContent = licenseStatus.tier === 'pro' ? 'Pro' : 'Standard';
-    badgeTier.className = licenseStatus.tier === 'pro' ? 'badge-tier pro' : 'badge-tier';
     enterLicenseBtn.style.display = 'none';
 
-    // Show/hide sheets button based on tier
-    updateSheetsButtonForTier();
   } else if (licenseStatus.status === 'trial' && licenseStatus.trialScrapesRemaining > 0) {
     // Active trial - show banner
     trialBanner.style.display = 'flex';
@@ -173,18 +161,6 @@ function updateLicenseUI() {
     // Hide main action buttons when trial ended
     document.querySelector('.button-section').style.display = 'none';
     document.querySelector('.options-section').style.display = 'none';
-  }
-}
-
-// Update Sheets button based on tier
-function updateSheetsButtonForTier() {
-  if (licenseStatus.status === 'active' && licenseStatus.tier === 'standard') {
-    // Standard tier - disable Sheets and show Pro badge
-    exportSheetsBtn.classList.add('disabled-pro');
-    exportSheetsBtn.title = 'Google Sheets export is a Pro feature';
-  } else {
-    exportSheetsBtn.classList.remove('disabled-pro');
-    exportSheetsBtn.title = '';
   }
 }
 
@@ -221,7 +197,7 @@ socialSearchCheckbox.addEventListener('change', async () => {
 
 // License activation handlers
 upgradeFromBanner.addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://quenitolabs.gumroad.com/l/maps-lead-scraper' });
+  chrome.tabs.create({ url: 'https://buy.stripe.com/6oU00k3PLgLE6wh9ij77O00' });
 });
 
 enterLicenseBtn.addEventListener('click', () => {
@@ -326,7 +302,7 @@ toggleFieldsBtn.addEventListener('click', () => {
 toggleFiltersBtn.addEventListener('click', () => {
   const isHidden = filtersSection.style.display === 'none';
   filtersSection.style.display = isHidden ? 'block' : 'none';
-  toggleFiltersBtn.textContent = isHidden ? 'Hide Filters' : 'Scrape Filters ▼';
+  toggleFiltersBtn.textContent = isHidden ? 'Hide Filters' : 'Lead Filters ▼';
 });
 
 // Filter helpers
@@ -411,7 +387,8 @@ clearResultsBtn.addEventListener('click', async () => {
     scrapedDataWithEmails: [],
     isScrapin: false,
     isExtractingEmails: false,
-    currentFilteredOut: 0
+    currentFilteredOut: 0,
+    emailExtractionSummary: null
   });
 
   // Reset UI
@@ -420,7 +397,6 @@ clearResultsBtn.addEventListener('click', async () => {
   duplicateStatus.style.display = 'none';
   filteredStatus.style.display = 'none';
   exportBtn.disabled = true;
-  exportSheetsBtn.disabled = true;
   clearResultsBtn.style.display = 'none';
   updateExtractEmailsButtonState();
   updateUI();
@@ -433,100 +409,6 @@ fieldCheckboxes.forEach(checkbox => {
     exportFields[fieldName] = checkbox.checked;
     await chrome.storage.local.set({ exportFields });
   });
-});
-
-// Google Sheets export handlers
-exportSheetsBtn.addEventListener('click', async () => {
-  // Check if user can export to Sheets (Pro feature for licensed users)
-  const sheetsAccess = await chrome.runtime.sendMessage({ action: 'canExportToSheets' });
-  if (!sheetsAccess.allowed) {
-    showError(sheetsAccess.reason);
-    return;
-  }
-
-  // Check if we have a last sheet ID to show append option
-  const result = await chrome.storage.local.get(['lastSheetId']);
-  if (result.lastSheetId) {
-    appendOption.style.display = 'block';
-  } else {
-    appendOption.style.display = 'none';
-  }
-  sheetsModal.style.display = 'flex';
-});
-
-closeModalBtn.addEventListener('click', () => {
-  sheetsModal.style.display = 'none';
-  sheetsStatus.style.display = 'none';
-});
-
-cancelSheetsBtn.addEventListener('click', () => {
-  sheetsModal.style.display = 'none';
-  sheetsStatus.style.display = 'none';
-});
-
-confirmSheetsBtn.addEventListener('click', async () => {
-  const selectedOption = document.querySelector('input[name="sheetsOption"]:checked').value;
-
-  // Show status
-  sheetsStatus.style.display = 'block';
-  sheetsStatusText.textContent = 'Connecting to Google...';
-  confirmSheetsBtn.disabled = true;
-
-  // Get data to export (with field filtering applied)
-  let dataToExport = scrapedDataWithEmails.length > 0 ? scrapedDataWithEmails : scrapedData;
-
-  // Apply post-extraction filters
-  dataToExport = applyPostExtractionFilters(dataToExport);
-
-  if (dataToExport.length === 0) {
-    sheetsStatusText.textContent = 'No data to export (all results filtered out)';
-    confirmSheetsBtn.disabled = false;
-    return;
-  }
-
-  // Get search query from current tab URL
-  let searchQuery = 'Unknown search';
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.url) {
-      searchQuery = extractSearchQuery(tab.url);
-    }
-  } catch (e) {
-    console.warn('Could not get search query:', e);
-  }
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      action: 'exportToSheets',
-      data: dataToExport,
-      exportFields: exportFields,
-      option: selectedOption,
-      searchQuery: searchQuery
-    });
-
-    if (response.success) {
-      sheetsStatusText.textContent = 'Export complete!';
-
-      // Open the spreadsheet in a new tab
-      if (response.spreadsheetUrl) {
-        chrome.tabs.create({ url: response.spreadsheetUrl });
-      }
-
-      // Close modal after delay
-      setTimeout(() => {
-        sheetsModal.style.display = 'none';
-        sheetsStatus.style.display = 'none';
-        confirmSheetsBtn.disabled = false;
-      }, 1500);
-    } else {
-      sheetsStatusText.textContent = response.error || 'Export failed';
-      confirmSheetsBtn.disabled = false;
-    }
-  } catch (error) {
-    console.error('Sheets export error:', error);
-    sheetsStatusText.textContent = 'Export failed: ' + error.message;
-    confirmSheetsBtn.disabled = false;
-  }
 });
 
 // Extract search query from Google Maps URL
@@ -582,6 +464,7 @@ async function loadStoredData() {
       'isScrapin',
       'isExtractingEmails',
       'emailExtractionProgress',
+      'emailExtractionSummary',
       'autoExtractEmails',
       'exportFields',
       'notificationsEnabled',
@@ -645,12 +528,28 @@ async function loadStoredData() {
       scrapedData = result.scrapedData;
       updateLeadCount(scrapedData.length);
       exportBtn.disabled = false;
-      exportSheetsBtn.disabled = false;
       updateExtractEmailsButtonState();
     }
     if (result.scrapedDataWithEmails) {
       scrapedDataWithEmails = result.scrapedDataWithEmails;
     }
+
+    // Restore email extraction summary (emails found + verification counts)
+    if (result.emailExtractionSummary && !result.isExtractingEmails && result.scrapedDataWithEmails && result.scrapedDataWithEmails.length > 0) {
+      const summary = result.emailExtractionSummary;
+      showEmailSection();
+      emailStatus.textContent = `Done! Found emails for ${summary.emailsFound} businesses`;
+      cancelEmailBtn.style.display = 'none';
+      const counts = summary.verificationCounts;
+      if (counts && (counts.verified > 0 || counts.unverified > 0 || counts.invalid > 0)) {
+        const summaryEl = document.getElementById('verificationSummary');
+        if (summaryEl) {
+          summaryEl.innerHTML = `<span class="v-verified">✅ ${counts.verified} Verified</span> <span class="v-unverified">⚠️ ${counts.unverified} Unverified</span> <span class="v-invalid">❌ ${counts.invalid} Invalid</span>`;
+          summaryEl.style.display = 'flex';
+        }
+      }
+    }
+
     if (result.isScrapin) {
       isScrapin = result.isScrapin;
       updateUI();
@@ -705,7 +604,6 @@ async function checkCurrentTabStatus() {
           scrapedData = response.data;
           updateLeadCount(scrapedData.length);
           exportBtn.disabled = false;
-          exportSheetsBtn.disabled = false;
           updateExtractEmailsButtonState();
         }
         updateUI();
@@ -725,7 +623,7 @@ function updateUI() {
 
   if (isScrapin) {
     statusIndicator.classList.add('scraping');
-    statusText.textContent = 'Scraping...';
+    statusText.textContent = 'Collecting...';
     startStopBtn.textContent = 'Stop';
     startStopBtn.classList.add('active');
     extractEmailsBtn.disabled = true;
@@ -739,7 +637,7 @@ function updateUI() {
   } else if (scrapedData.length > 0) {
     statusIndicator.classList.add('complete');
     statusText.textContent = 'Complete';
-    startStopBtn.textContent = 'Start Scraping';
+    startStopBtn.textContent = 'Start Collecting';
     startStopBtn.classList.remove('active');
     startStopBtn.disabled = false;
     updateExtractEmailsButtonState();
@@ -748,7 +646,7 @@ function updateUI() {
   } else {
     statusIndicator.classList.add('ready');
     statusText.textContent = 'Ready';
-    startStopBtn.textContent = 'Start Scraping';
+    startStopBtn.textContent = 'Start Collecting';
     startStopBtn.classList.remove('active');
     startStopBtn.disabled = false;
   }
@@ -852,7 +750,8 @@ startStopBtn.addEventListener('click', async () => {
         isScrapin: true,
         isExtractingEmails: false,
         scrapedData: [],
-        scrapedDataWithEmails: []
+        scrapedDataWithEmails: [],
+        emailExtractionSummary: null
       });
       await chrome.tabs.sendMessage(tab.id, { action: 'startScraping', filters: scrapeFilters });
     }
@@ -869,7 +768,7 @@ async function startEmailExtraction() {
   hideError();
 
   if (scrapedData.length === 0) {
-    showError('No data to extract emails from. Scrape some leads first.');
+    showError('No data to extract emails from. Collect some leads first.');
     return false;
   }
 
@@ -884,6 +783,8 @@ async function startEmailExtraction() {
   await chrome.storage.local.set({ isExtractingEmails: true });
 
   showEmailSection();
+  const summaryEl = document.getElementById('verificationSummary');
+  if (summaryEl) { summaryEl.style.display = 'none'; summaryEl.innerHTML = ''; }
   cancelEmailBtn.style.display = 'inline-block';
   cancelEmailBtn.textContent = 'Cancel';
   cancelEmailBtn.disabled = false;
@@ -971,7 +872,7 @@ function convertToCSV(data) {
 
   // All possible headers in order (v2.1: added contactPageUrl, facebookUrl, instagramUrl, linkedinUrl, twitterUrl)
   const allHeaders = hasEmails
-    ? ['name', 'email', 'emailSource', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl']
+    ? ['name', 'email', 'emailSource', 'emailVerificationStatus', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl']
     : ['name', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl'];
 
   // Filter headers based on exportFields selection (name is always included)
@@ -1036,7 +937,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.storage.local.set({ scrapedData: message.data });
       if (message.data.length > 0) {
         exportBtn.disabled = false;
-        exportSheetsBtn.disabled = false;
         updateExtractEmailsButtonState();
       }
     }
@@ -1060,7 +960,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     updateLeadCount(scrapedData.length);
     chrome.storage.local.set({ isScrapin: false, scrapedData: scrapedData });
     exportBtn.disabled = scrapedData.length === 0;
-    exportSheetsBtn.disabled = scrapedData.length === 0;
     updateExtractEmailsButtonState();
 
     // Refresh license UI (in case trial just expired after this scrape)
@@ -1155,18 +1054,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     updateUI();
   } else if (message.type === 'emailProgress') {
     // Email extraction progress
-    updateEmailProgress(message.current, message.total, message.businessName);
+    if (message.phase === 'verifying') {
+      emailStatus.textContent = 'Verifying emails...';
+      emailCount.textContent = `${message.current}/${message.total}`;
+      progressFill.style.width = `${Math.round((message.current / message.total) * 100)}%`;
+      currentBusiness.textContent = message.businessName;
+    } else {
+      updateEmailProgress(message.current, message.total, message.businessName);
+    }
   } else if (message.type === 'emailComplete') {
     // Email extraction complete
     isExtractingEmails = false;
     scrapedDataWithEmails = message.data || [];
-    chrome.storage.local.set({ isExtractingEmails: false, scrapedDataWithEmails: scrapedDataWithEmails });
 
     // Count emails found
     const emailsFound = scrapedDataWithEmails.filter(b => b.emails && b.emails.length > 0).length;
+    const counts = message.verificationCounts;
+
+    // Persist counts so they survive popup close/reopen
+    chrome.storage.local.set({
+      isExtractingEmails: false,
+      scrapedDataWithEmails: scrapedDataWithEmails,
+      emailExtractionSummary: { emailsFound, verificationCounts: counts || null }
+    });
+
     emailStatus.textContent = `Done! Found emails for ${emailsFound} businesses`;
     currentBusiness.textContent = '';
     cancelEmailBtn.style.display = 'none';
+
+    // Show verification summary
+    if (counts && (counts.verified > 0 || counts.unverified > 0 || counts.invalid > 0)) {
+      const summaryEl = document.getElementById('verificationSummary');
+      if (summaryEl) {
+        summaryEl.innerHTML = `<span class="v-verified">✅ ${counts.verified} Verified</span> <span class="v-unverified">⚠️ ${counts.unverified} Unverified</span> <span class="v-invalid">❌ ${counts.invalid} Invalid</span>`;
+        summaryEl.style.display = 'flex';
+      }
+    }
 
     // Update last search history entry with email count
     (async () => {

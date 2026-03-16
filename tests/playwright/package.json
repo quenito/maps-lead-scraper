@@ -1,0 +1,23 @@
+{
+  "name": "playwright",
+  "version": "1.0.0",
+  "description": "Automated test and data generation engine for the Maps Lead Scraper extension. Launches Chrome with the extension loaded, runs Google Maps scrapes, and captures structured output.",
+  "main": "run-scrape.js",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:ui": "HEADED=1 npx playwright test",
+    "test:popup": "npx playwright test popup-ui ui-states",
+    "test:scrape": "npx playwright test google-maps-scrape",
+    "test:export": "npx playwright test export",
+    "test:license": "npx playwright test license"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.58.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

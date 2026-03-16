@@ -137,3 +137,13 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+.mcp.json
+
+# Playwright test artifacts
+tests/playwright/results/
+tests/playwright/.chrome-profile/
+tests/playwright/.hero-chrome-profile/
+tests/playwright/.demo-chrome-profile/
+tests/playwright/run-log.csv
+tests/playwright/node_modules/
+screenshots/

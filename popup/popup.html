@@ -15,43 +15,30 @@
     <main>
       <!-- Trial Banner -->
       <div class="trial-banner" id="trialBanner">
-        <span class="trial-text">Trial: <strong id="trialCount">3</strong> scrapes remaining</span>
+        <span class="trial-text">Trial: <strong id="trialCount">3</strong> collections remaining</span>
         <button class="btn-upgrade-small" id="upgradeFromBanner">Upgrade</button>
       </div>
 
       <!-- License Status (for licensed users) -->
       <div class="license-badge" id="licenseBadge" style="display: none;">
-        <span class="badge-tier" id="badgeTier">Standard</span>
+        <span class="badge-licensed">Licensed</span>
       </div>
 
       <!-- Trial Ended Overlay -->
       <div class="trial-ended-section" id="trialEndedSection" style="display: none;">
         <div class="trial-ended-icon">&#128274;</div>
         <h2>Trial Ended</h2>
-        <p>You've used all 3 free scrapes. Purchase a license to continue extracting leads.</p>
-        <div class="tier-cards">
-          <div class="tier-card">
-            <h3>Standard</h3>
-            <div class="tier-price">$49</div>
-            <ul class="tier-features">
-              <li>Unlimited scrapes</li>
-              <li>CSV export</li>
-              <li>Email extraction</li>
-              <li>Duplicate detection</li>
-            </ul>
-            <a href="https://quenitolabs.gumroad.com/l/maps-lead-scraper?option=eozfXvCnw67sqObPyLh1Xw%3D%3D" target="_blank" class="btn btn-secondary">Get Standard</a>
-          </div>
-          <div class="tier-card tier-pro">
-            <div class="tier-popular">Most Popular</div>
-            <h3>Pro</h3>
-            <div class="tier-price">$79</div>
-            <ul class="tier-features">
-              <li>Everything in Standard</li>
-              <li>Google Sheets export</li>
-              <li>Priority support</li>
-            </ul>
-            <a href="https://quenitolabs.gumroad.com/l/maps-lead-scraper?option=gjoho0cL-xAivbiUDl_ybg%3D%3D" target="_blank" class="btn btn-primary">Get Pro</a>
-          </div>
+        <p>You've used all 3 free collections. Purchase a license to continue extracting leads.</p>
+        <div class="pricing-card">
+          <h3>Full Access</h3>
+          <div class="pricing-amount">$49</div>
+          <ul class="pricing-features">
+            <li>Unlimited collections</li>
+            <li>CSV export</li>
+            <li>Email extraction &amp; verification</li>
+            <li>Duplicate detection</li>
+          </ul>
+          <a href="https://buy.stripe.com/6oU00k3PLgLE6wh9ij77O00" target="_blank" class="btn btn-primary">Get Full Access</a>
         </div>
         <div class="license-input-section">
           <p class="already-purchased">Already purchased?</p>
@@ -70,7 +57,7 @@
         </div>
         <div class="lead-count">
           <span class="count-number" id="leadCount">0</span>
-          <span class="count-label">leads scraped</span>
+          <span class="count-label">leads collected</span>
         </div>
         <div class="duplicate-status" id="duplicateStatus" style="display: none;">
           <span class="duplicate-count" id="duplicateCount">0</span>
@@ -94,14 +81,15 @@
           <div class="current-business" id="currentBusiness"></div>
           <button class="btn-cancel" id="cancelEmailBtn" style="display: none;">Cancel</button>
         </div>
+        <div class="verification-summary" id="verificationSummary" style="display: none;"></div>
       </div>
 
       <div class="error-message" id="errorMessage"></div>
 
       <div class="options-section">
-        <label class="checkbox-label" title="Uncheck to manually control collecting email addresses after the scrape has finished">
+        <label class="checkbox-label" title="Uncheck to manually control collecting email addresses after lead collection has finished">
           <input type="checkbox" id="autoExtractCheckbox" checked>
-          <span>Auto-extract contact info after scraping</span>
+          <span>Auto-extract contact info after collecting</span>
         </label>
         <label class="checkbox-label">
           <input type="checkbox" id="notificationsCheckbox" checked>
@@ -115,7 +103,7 @@
 
       <!-- Pre-Scrape Filters -->
       <div class="filters-toggle-section">
-        <button class="btn-text" id="toggleFiltersBtn">Scrape Filters ▼</button>
+        <button class="btn-text" id="toggleFiltersBtn">Lead Filters ▼</button>
         <span class="active-filter-badge" id="activeFilterBadge" style="display: none;">0 active</span>
       </div>
 
@@ -179,7 +167,7 @@
       </div>
 
       <div class="button-section">
-        <button class="btn btn-primary" id="startStopBtn">Start Scraping</button>
+        <button class="btn btn-primary" id="startStopBtn">Start Collecting</button>
         <button class="btn btn-email" id="extractEmailsBtn" disabled>Extract Emails</button>
 
         <div class="fields-toggle-section">
@@ -199,6 +187,10 @@
             <label class="field-checkbox">
               <input type="checkbox" data-field="emailSource" checked>
               <span>Email Source</span>
+            </label>
+            <label class="field-checkbox">
+              <input type="checkbox" data-field="emailVerificationStatus" checked>
+              <span>Verification Status</span>
             </label>
             <label class="field-checkbox">
               <input type="checkbox" data-field="rating" checked>
@@ -260,38 +252,9 @@
         </div>
 
         <button class="btn btn-secondary" id="exportBtn" disabled>Export CSV</button>
-        <button class="btn btn-sheets" id="exportSheetsBtn" disabled>Export to Sheets</button>
         <button class="btn-text btn-clear" id="clearResultsBtn" style="display: none;">Clear Results</button>
       </div>
 
-      <!-- Google Sheets Export Modal -->
-      <div class="modal-overlay" id="sheetsModal" style="display: none;">
-        <div class="modal">
-          <div class="modal-header">
-            <h3>Export to Google Sheets</h3>
-            <button class="modal-close" id="closeModalBtn">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="modal-options">
-              <label class="radio-label">
-                <input type="radio" name="sheetsOption" value="new" checked>
-                <span>Create new spreadsheet</span>
-              </label>
-              <label class="radio-label" id="appendOption" style="display: none;">
-                <input type="radio" name="sheetsOption" value="append">
-                <span>Append to last export</span>
-              </label>
-            </div>
-            <div class="modal-status" id="sheetsStatus" style="display: none;">
-              <span id="sheetsStatusText">Connecting to Google...</span>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelSheetsBtn">Cancel</button>
-            <button class="btn btn-sheets" id="confirmSheetsBtn">Export</button>
-          </div>
-        </div>
-      </div>
     </main>
 
     <div class="history-section" id="historySection">
@@ -312,7 +275,7 @@
         Clear History (<span id="historyCount">0</span> saved)
       </button>
       <button class="btn-text" id="enterLicenseBtn">Enter License Key</button>
-      <span class="version">v2.0.0</span>
+      <span class="version">v3.0.0</span>
     </footer>
 
     <!-- License Key Modal -->
@@ -323,7 +286,7 @@
           <button class="modal-close" id="closeLicenseModalBtn">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-description">Enter your license key from Gumroad to activate.</p>
+          <p class="modal-description">Enter your license key to activate.</p>
           <input type="text" id="modalLicenseInput" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" class="license-input license-input-full">
           <div class="license-error" id="modalLicenseError" style="display: none;"></div>
         </div>

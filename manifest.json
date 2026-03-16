@@ -1,25 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Google Maps Lead Scraper",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Extract business leads and emails from Google Maps search results",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
-    "notifications",
-    "identity"
+    "notifications"
   ],
   "host_permissions": [
     "https://www.google.com/maps/*",
     "<all_urls>"
   ],
-  "oauth2": {
-    "client_id": "260560444236-5f7ggmuev8dokq3vh1k3d0v3lqdjtai0.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/spreadsheets"
-    ]
-  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {

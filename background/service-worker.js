@@ -6,7 +6,7 @@
 // ============================================
 
 const TRIAL_SCRAPES = 3;
-const GUMROAD_PRODUCT_ID = 'iejae'; // Gumroad product ID for Maps Lead Scraper
+const KEYGEN_ACCOUNT_ID = '441053a9-f19b-48e3-8d8d-502a96974848';
 
 // Email extraction cancellation flag
 let emailExtractionCancelled = false;
@@ -48,62 +48,48 @@ async function getLicenseStatus() {
   return result.licenseStatus;
 }
 
-// Validate license key with Gumroad API
+// Validate license key with Keygen API
 async function validateLicenseKey(licenseKey) {
   try {
-    const response = await fetch('https://api.gumroad.com/v2/licenses/verify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        product_id: GUMROAD_PRODUCT_ID,
-        license_key: licenseKey,
-        increment_uses_count: 'false' // Don't increment on validation check
-      })
-    });
+    const response = await fetch(
+      `https://api.keygen.sh/v1/accounts/${KEYGEN_ACCOUNT_ID}/licenses/actions/validate-key`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/vnd.api+json',
+          Accept: 'application/vnd.api+json'
+        },
+        body: JSON.stringify({
+          meta: { key: licenseKey }
+        })
+      }
+    );
 
     const data = await response.json();
 
-    if (!data.success) {
-      return {
-        valid: false,
-        error: data.message || 'Invalid license key'
-      };
-    }
-
-    // Check if refunded
-    if (data.purchase && data.purchase.refunded) {
-      return {
-        valid: false,
-        error: 'This license has been refunded'
-      };
-    }
-
-    // Check if chargebacked
-    if (data.purchase && data.purchase.chargebacked) {
-      return {
-        valid: false,
-        error: 'This license has been chargebacked'
-      };
-    }
-
-    // Determine tier from variant name or use 'standard' as default
-    // Gumroad returns variant info in purchase.variants if product has variants
-    let tier = 'standard';
-    if (data.purchase) {
-      const variantName = data.purchase.variant_name || data.purchase.variants || '';
-      if (typeof variantName === 'string' && variantName.toLowerCase().includes('pro')) {
-        tier = 'pro';
+    if (!data.meta || data.meta.valid !== true) {
+      const code = data.meta?.code;
+      let error = 'Invalid license key';
+      if (code === 'NOT_FOUND') {
+        error = 'That license key does not exist';
+      } else if (code === 'SUSPENDED') {
+        error = 'This license has been suspended';
+      } else if (code === 'EXPIRED') {
+        error = 'This license has expired';
+      } else if (data.meta?.detail) {
+        error = data.meta.detail;
       }
+      return { valid: false, error };
     }
+
+    const license = data.data;
+    const metadata = license?.attributes?.metadata || {};
 
     return {
       valid: true,
-      tier: tier,
-      email: data.purchase?.email || null,
-      purchaseDate: data.purchase?.created_at || null,
-      uses: data.uses || 0
+      tier: 'standard',
+      email: metadata.email || null,
+      purchaseDate: license?.attributes?.created || null
     };
   } catch (error) {
     console.error('[License] Validation error:', error);
@@ -188,33 +174,6 @@ async function canScrape() {
   };
 }
 
-// Check if user can export to Google Sheets (Pro tier only)
-async function canExportToSheets() {
-  const status = await getLicenseStatus();
-
-  // Trial users get full access (including Sheets) during trial
-  if (status.status === 'trial' && status.trialScrapesRemaining > 0) {
-    return { allowed: true, reason: null };
-  }
-
-  // Active Pro users can export
-  if (status.status === 'active' && status.tier === 'pro') {
-    return { allowed: true, reason: null };
-  }
-
-  // Active Standard users cannot
-  if (status.status === 'active' && status.tier === 'standard') {
-    return {
-      allowed: false,
-      reason: 'Google Sheets export is a Pro feature. Upgrade to Pro to unlock.'
-    };
-  }
-
-  return {
-    allowed: false,
-    reason: 'Please purchase a license to use this feature.'
-  };
-}
 
 // Email extraction regex patterns
 const EMAIL_PATTERNS = [
@@ -1112,6 +1071,116 @@ async function fetchAndExtractEmails(url, businessAddress) {
   }
 }
 
+// ============================================
+// 3-Layer Email Verification
+// ============================================
+
+// Layer 1: Syntax check (RFC 5322)
+function isValidEmailSyntax(email) {
+  const pattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+  return pattern.test(email);
+}
+
+// Layer 2: Disposable domain detection
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com', 'guerrillamail.com', 'guerrillamail.net', 'tempmail.com',
+  'throwaway.email', 'yopmail.com', 'sharklasers.com', 'guerrillamailblock.com',
+  'grr.la', 'dispostable.com', 'mailnesia.com', 'maildrop.cc', 'discard.email',
+  'trashmail.com', 'trashmail.me', 'trashmail.net', 'temp-mail.org',
+  'fakeinbox.com', 'tempail.com', 'jetable.org', 'trash-mail.com',
+  'harakirimail.com', 'mailexpire.com', 'throwam.com', 'spamgourmet.com',
+  'mytrashmail.com', 'gishpuppy.com', 'incognitomail.com', 'mailcatch.com',
+  'mailscrap.com', 'mailmoat.com', 'mailnull.com', 'spamfree24.org',
+  'trashymail.com', 'mailzilla.com', 'devnullmail.com', 'letthemeatspam.com',
+  'safetymail.info', 'spambox.us', 'spamavert.com', 'filzmail.com',
+  'mailblocks.com', 'tempr.email', 'tempmailaddress.com', 'tempinbox.com',
+  'emailondeck.com', 'disposableemailaddresses.emailmiser.com',
+  'guerrillamail.de', 'guerrillamail.biz', 'guerrillamail.org',
+  'mintemail.com', 'tempomail.fr', 'pookmail.com', 'throwawaymail.com',
+  'bugmenot.com', 'binkmail.com', 'sogetthis.com', 'mailinator.net',
+  'trashymail.net', 'kasmail.com', 'anonmails.de', 'dontreg.com',
+  'fakemailgenerator.com', 'getnada.com', 'emailfake.com',
+  'tempmailo.com', 'mohmal.com', 'burnermail.io', 'guerrillamail.info',
+  'nomail.xl.cx', 'rmqkr.net', 'cuvox.de', 'dayrep.com', 'einrot.com',
+  'fleckens.hu', 'gustr.com', 'jourrapide.com', 'rhyta.com', 'superrito.com',
+  'teleworm.us', 'armyspy.com', 'despammed.com', 'wuzup.net',
+  'trash2009.com', 'boun.cr', 'dingbone.com', 'fudgerub.com',
+  'lookugly.com', 'shitmail.me', 'vidchart.com',
+  '10minutemail.com', '10minutemail.net', '20minutemail.com',
+  'coconut.finance', 'minutemail.com', 'mt2015.com',
+  'spamcero.com', 'uggsrock.com', 'veryreallysmart.com',
+  'wegwerfmail.de', 'wegwerfmail.net', 'mailforspam.com',
+  'safetypost.de', 'emkei.cz', 'ephemail.net',
+  'tempmail.net', 'tmpmail.net', 'tmpmail.org',
+  'mailtemp.info', 'disbox.net', 'disbox.org',
+  'emailisvalid.com', 'emailresolver.com', 'fakemailgenerator.net',
+  'fakemail.net', 'getairmail.com', 'instant-mail.de',
+  'objectmail.com', 'proxymail.eu', 'rcpt.at',
+  'reallymymail.com', 'recipeforfailure.com', 'regbypass.com',
+  'spaml.com', 'spamoff.de', 'thankyou2010.com',
+  'vomoto.com', 'wasabi.finance', 'yolanda.dev'
+]);
+
+function isDisposableDomain(email) {
+  const domain = email.split('@')[1]?.toLowerCase();
+  return domain ? DISPOSABLE_DOMAINS.has(domain) : false;
+}
+
+// Layer 3: MX record lookup via DNS-over-HTTPS
+const mxCache = new Map();
+
+async function lookupMX(domain) {
+  if (mxCache.has(domain)) return mxCache.get(domain);
+
+  try {
+    // Primary: Google Public DNS
+    const response = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`);
+    const json = await response.json();
+    const hasMX = json.Answer && json.Answer.some(a => a.type === 15);
+    mxCache.set(domain, hasMX);
+    return hasMX;
+  } catch (e) {
+    // Fallback: Cloudflare DNS
+    try {
+      const response = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=MX`, {
+        headers: { 'Accept': 'application/dns-json' }
+      });
+      const json = await response.json();
+      const hasMX = json.Answer && json.Answer.some(a => a.type === 15);
+      mxCache.set(domain, hasMX);
+      return hasMX;
+    } catch (e2) {
+      return null; // Unknown
+    }
+  }
+}
+
+async function verifyEmail(email) {
+  // Layer 1: Syntax check
+  if (!isValidEmailSyntax(email)) {
+    return 'Invalid';
+  }
+
+  // Layer 2: Disposable domain
+  if (isDisposableDomain(email)) {
+    return 'Invalid';
+  }
+
+  // Layer 3: MX record lookup
+  const domain = email.split('@')[1];
+  const hasMX = await lookupMX(domain);
+  if (hasMX === true) return 'Verified';
+  if (hasMX === false) return 'Invalid';
+  return 'Unverified'; // null = couldn't determine
+}
+
+// Verify all emails for a business and return the status of the first/primary email
+async function verifyBusinessEmails(emails) {
+  if (!emails || emails.length === 0) return null;
+  // Verify the primary email (first one)
+  return await verifyEmail(emails[0]);
+}
+
 // Process multiple businesses for email extraction
 // v2.1: Added socialSearchEnabled parameter for Google search fallback
 async function extractEmailsFromBusinesses(businesses, sendProgress, socialSearchEnabled = false) {
@@ -1307,241 +1376,31 @@ async function extractEmailsFromBusinesses(businesses, sendProgress, socialSearc
     }
   }
 
+  // Run email verification on all results
+  const emailResults = results.filter(r => r.emails && r.emails.length > 0);
+  for (let i = 0; i < emailResults.length; i++) {
+    if (emailExtractionCancelled) break;
+
+    if (sendProgress) {
+      sendProgress({
+        current: i + 1,
+        total: emailResults.length,
+        businessName: emailResults[i].name,
+        phase: 'verifying'
+      });
+    }
+
+    emailResults[i].emailVerificationStatus = await verifyBusinessEmails(emailResults[i].emails);
+  }
+
+  // Set null for businesses without emails
+  results.forEach(r => {
+    if (!r.emailVerificationStatus) {
+      r.emailVerificationStatus = null;
+    }
+  });
+
   return results;
-}
-
-// ============================================
-// Google Sheets Export Functions
-// ============================================
-
-// Get OAuth token for Google Sheets API
-async function getAuthToken() {
-  return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken({ interactive: true }, (token) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message || 'Failed to get auth token'));
-      } else if (token) {
-        resolve(token);
-      } else {
-        reject(new Error('No token received'));
-      }
-    });
-  });
-}
-
-// Escape double quotes for use in Sheets HYPERLINK formula
-function escapeForHyperlink(str) {
-  if (!str) return '';
-  // Escape double quotes by doubling them
-  return str.replace(/"/g, '""');
-}
-
-// Convert data to rows for Google Sheets
-function dataToRows(data, exportFields) {
-  const hasEmails = data.some(row => row.emails && row.emails.length > 0);
-
-  // Build headers based on selected fields
-  // v2.1: Added contactPageUrl, facebookUrl, instagramUrl, linkedinUrl, twitterUrl
-  const allFields = hasEmails
-    ? ['name', 'email', 'emailSource', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl']
-    : ['name', 'rating', 'reviewCount', 'category', 'address', 'phone', 'website', 'contactPageUrl', 'hasContactForm', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl', 'googleMapsUrl'];
-
-  const headers = allFields.filter(field => {
-    if (field === 'name') return true;
-    return exportFields[field] !== false;
-  });
-
-  // Fields that should be rendered as clickable hyperlinks
-  const hyperlinkFields = ['googleMapsUrl', 'contactPageUrl', 'facebookUrl', 'instagramUrl', 'linkedinUrl', 'twitterUrl', 'socialSearchUrl'];
-
-  // Build data rows
-  const rows = data.map(row => {
-    const email = row.emails && row.emails.length > 0 ? row.emails.join('; ') : '';
-    return headers.map(header => {
-      if (header === 'email') return email;
-
-      // Format URL fields as clickable hyperlinks (v2.1)
-      if (hyperlinkFields.includes(header)) {
-        const url = row[header] || '';
-        if (url) {
-          // Use business name for Maps link, domain/platform name for others
-          let linkText = url;
-          if (header === 'googleMapsUrl') {
-            linkText = row.name || 'View on Maps';
-          } else if (header === 'contactPageUrl') {
-            linkText = 'Contact Page';
-          } else if (header === 'facebookUrl') {
-            linkText = 'Facebook';
-          } else if (header === 'instagramUrl') {
-            linkText = 'Instagram';
-          } else if (header === 'linkedinUrl') {
-            linkText = 'LinkedIn';
-          } else if (header === 'twitterUrl') {
-            linkText = 'Twitter/X';
-          } else if (header === 'socialSearchUrl') {
-            linkText = 'Social Search';
-          }
-          return `=HYPERLINK("${escapeForHyperlink(url)}", "${escapeForHyperlink(linkText)}")`;
-        }
-        return '';
-      }
-
-      // Render hasContactForm as Yes/No
-      if (header === 'hasContactForm') {
-        return row[header] ? 'Yes' : 'No';
-      }
-
-      // Prefix phone with single quote to prevent formula interpretation
-      if (header === 'phone') {
-        const phone = row.phone || '';
-        return phone ? `'${phone}` : '';
-      }
-      return row[header] || '';
-    });
-  });
-
-  // Return header row + data rows
-  return [headers, ...rows];
-}
-
-// Create a new Google Spreadsheet
-async function createSpreadsheet(token, title, rows) {
-  // Create the spreadsheet
-  const createResponse = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      properties: {
-        title: title
-      },
-      sheets: [{
-        properties: {
-          title: 'Leads'
-        }
-      }]
-    })
-  });
-
-  if (!createResponse.ok) {
-    const error = await createResponse.text();
-    throw new Error(`Failed to create spreadsheet: ${error}`);
-  }
-
-  const spreadsheet = await createResponse.json();
-  const spreadsheetId = spreadsheet.spreadsheetId;
-
-  // Add data to the spreadsheet (USER_ENTERED allows formulas like HYPERLINK to work)
-  const updateResponse = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Leads!A1:append?valueInputOption=USER_ENTERED`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        values: rows
-      })
-    }
-  );
-
-  if (!updateResponse.ok) {
-    const error = await updateResponse.text();
-    throw new Error(`Failed to add data: ${error}`);
-  }
-
-  return {
-    spreadsheetId,
-    spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
-  };
-}
-
-// Append data to an existing spreadsheet
-async function appendToSpreadsheet(token, spreadsheetId, rows) {
-  // Skip header row when appending
-  const dataRows = rows.slice(1);
-
-  const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Leads!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        values: dataRows
-      })
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to append data: ${error}`);
-  }
-
-  return {
-    spreadsheetId,
-    spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
-  };
-}
-
-// Main export function
-async function exportToGoogleSheets(data, exportFields, option, searchQuery) {
-  try {
-    console.log('[Sheets Export] Starting export...');
-
-    // Get OAuth token
-    const token = await getAuthToken();
-    console.log('[Sheets Export] Got auth token');
-
-    // Convert data to rows
-    const rows = dataToRows(data, exportFields);
-    console.log(`[Sheets Export] Prepared ${rows.length} rows`);
-
-    let result;
-    const timestamp = new Date().toLocaleString();
-
-    if (option === 'append') {
-      // Get last sheet ID from storage
-      const storage = await chrome.storage.local.get(['lastSheetId']);
-      if (!storage.lastSheetId) {
-        throw new Error('No previous spreadsheet found');
-      }
-      result = await appendToSpreadsheet(token, storage.lastSheetId, rows);
-      console.log('[Sheets Export] Appended to existing spreadsheet');
-    } else {
-      // Create new spreadsheet with search query in title
-      const queryPart = searchQuery && searchQuery !== 'Unknown search' ? `"${searchQuery}" ` : '';
-      const title = `Google Maps Leads ${queryPart}- ${timestamp}`;
-      result = await createSpreadsheet(token, title, rows);
-
-      // Save sheet ID for future appends
-      await chrome.storage.local.set({ lastSheetId: result.spreadsheetId });
-      console.log('[Sheets Export] Created new spreadsheet');
-    }
-
-    // Send notification
-    await sendNotification(
-      'Export Complete',
-      `${data.length} leads exported to Google Sheets`
-    );
-
-    return {
-      success: true,
-      spreadsheetId: result.spreadsheetId,
-      spreadsheetUrl: result.spreadsheetUrl
-    };
-  } catch (error) {
-    console.error('[Sheets Export] Error:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
 // Listen for messages from content scripts or popup
@@ -1571,16 +1430,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Check if extraction was cancelled
       const wasCancelled = emailExtractionCancelled;
 
+      // Count verification statuses
+      const emailsFound = results.filter(b => b.emails && b.emails.length > 0).length;
+      const verifiedCount = results.filter(b => b.emailVerificationStatus === 'Verified').length;
+      const unverifiedCount = results.filter(b => b.emailVerificationStatus === 'Unverified').length;
+      const invalidCount = results.filter(b => b.emailVerificationStatus === 'Invalid').length;
+
       // Send completion message (includes partial results if cancelled)
       chrome.runtime.sendMessage({
         type: wasCancelled ? 'emailCancelled' : 'emailComplete',
-        data: results
+        data: results,
+        verificationCounts: { verified: verifiedCount, unverified: unverifiedCount, invalid: invalidCount }
       }).catch(() => {
         // Popup might be closed
       });
-
-      // Count businesses with emails found
-      const emailsFound = results.filter(b => b.emails && b.emails.length > 0).length;
 
       // Send browser notification
       if (!wasCancelled) {
@@ -1653,21 +1516,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === 'exportToSheets') {
-    // Check if user can export to Sheets (Pro feature)
-    (async () => {
-      const sheetsAccess = await canExportToSheets();
-      if (!sheetsAccess.allowed) {
-        sendResponse({ success: false, error: sheetsAccess.reason, proRequired: true });
-        return;
-      }
-
-      const result = await exportToGoogleSheets(message.data, message.exportFields, message.option, message.searchQuery);
-      sendResponse(result);
-    })();
-    return true;
-  }
-
   // License management actions
   if (message.action === 'getLicenseStatus') {
     getLicenseStatus().then(status => sendResponse(status));
@@ -1686,11 +1534,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === 'decrementTrial') {
     decrementTrialScrape().then(result => sendResponse(result));
-    return true;
-  }
-
-  if (message.action === 'canExportToSheets') {
-    canExportToSheets().then(result => sendResponse(result));
     return true;
   }
 

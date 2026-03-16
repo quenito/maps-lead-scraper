@@ -1,0 +1,16 @@
+# Chrome profiles (persistent data)
+.e2e-chrome-profile/
+.chrome-profile/
+.demo-chrome-profile/
+
+# Test results
+test-results/
+
+# Scrape results
+results/
+
+# Node
+node_modules/
+
+# Logs
+run-log.csv

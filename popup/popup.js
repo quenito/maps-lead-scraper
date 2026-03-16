@@ -549,6 +549,7 @@ async function loadStoredData() {
       showEmailSection();
       emailStatus.textContent = `Done! Found emails for ${summary.emailsFound} businesses`;
       emailCount.textContent = `${summary.emailsFound}/${summary.totalLeads || summary.emailsFound}`;
+      progressFill.style.width = '100%';
       cancelEmailBtn.style.display = 'none';
       const counts = summary.verificationCounts;
       if (counts && (counts.verified > 0 || counts.unverified > 0 || counts.invalid > 0)) {

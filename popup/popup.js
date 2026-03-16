@@ -548,6 +548,7 @@ async function loadStoredData() {
       const summary = result.emailExtractionSummary;
       showEmailSection();
       emailStatus.textContent = `Done! Found emails for ${summary.emailsFound} businesses`;
+      emailCount.textContent = `${summary.emailsFound}/${summary.totalLeads || summary.emailsFound}`;
       cancelEmailBtn.style.display = 'none';
       const counts = summary.verificationCounts;
       if (counts && (counts.verified > 0 || counts.unverified > 0 || counts.invalid > 0)) {
@@ -1089,16 +1090,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Count emails found
     const emailsFound = scrapedDataWithEmails.filter(b => b.emails && b.emails.length > 0).length;
+    const totalLeads = scrapedDataWithEmails.length;
     const counts = message.verificationCounts;
 
     // Persist counts so they survive popup close/reopen
     chrome.storage.local.set({
       isExtractingEmails: false,
       scrapedDataWithEmails: scrapedDataWithEmails,
-      emailExtractionSummary: { emailsFound, verificationCounts: counts || null }
+      emailExtractionSummary: { emailsFound, totalLeads, verificationCounts: counts || null }
     });
 
     emailStatus.textContent = `Done! Found emails for ${emailsFound} businesses`;
+    emailCount.textContent = `${emailsFound}/${totalLeads}`;
     currentBusiness.textContent = '';
     cancelEmailBtn.style.display = 'none';
 

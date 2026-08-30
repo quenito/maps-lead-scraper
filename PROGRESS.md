@@ -1,43 +1,32 @@
 ---
-task_id: v2-trades-two-streams-2026-07-10
+task_id: dfs-nsw3-session-independence-orchestrator-scheduling-jack
 agent: jack
-session_id: 2026-07-10-am3
-model: opus-4.8
+session_id: 79fd6dac-1773-4e81-8141-155e25b342dc
+model: claude-sonnet-4-6
 status: context-exit
-last_updated: 2026-07-10T02:30:00Z
+last_updated: 2026-08-30T08:30:00Z
+notion_task_id: null
 context_needed:
-  files: ["/home/olivia/projects/konnex-website/api/ask-konnex.js (PRESETS obj ~line 50 — 3 trade presets)", "/home/olivia/projects/konnex-website/index.html (kxQuery chips ~line 102)", "/home/jack/projects/market-intelligence/svi/nsw-trades-ingest-runner.js (requireTrade guard)", "worktree /tmp/mi-trade-guard on hardening/dfs-runner-require-trade (PR 62)"]
-  branches: ["market-intelligence origin/main (has DFS runner + incident fixes 41/44 + attribution fix)", "market-intelligence origin/hardening/dfs-runner-require-trade (PR 62, awaiting Rajesh review)"]
-  collaborators: [matt, rajesh, olivia, grace]
+  files: [/home/shared/config/dataforseo.env (Matt DFS GO sig on file), /home/jack/walter-host-rollback-Inc2-20260830T080710Z.tgz]
+  branches: [origin/main @ 92be25d]
+  collaborators: [rajesh (surfaced 3 open items, online), matt (approvals), grace (probation reviewer-gated)]
 ---
 
-## Done
-- STREAM 1 cherry-pick premise DISPROVEN by verification:
-  - 1c0a7f4 is ALREADY byte-identical on main (landed via #48). Nothing to pick.
-  - 141cd6f core fix (buildCrawlTradeMap ledger-sourced per-crawl attribution) is ALREADY on main (via #41/#44).
-  - Sole residual gap = silent `--trade || 'carpenter'` default (root cause of 2026-07-02 void-run incident).
-- Matt delegated the call to Jack; Rajesh independently agreed (QA: don't run a paid job against code w/ the known root-cause defect).
-- Built the fix as a small fresh-off-main PR (NOT a cherry-pick): requireTrade(trade,mode) guard — forward+recover fail loud without --trade; --repost unchanged (ledger-derived). Tests 72/72 PASS.
-- PR #62 MERGED to main (squash, commit 5d53859, 01:53:39Z) — Rajesh QA PASS + approved, CI green, 72/72 tests. Silent --trade default gone; forward+recover fail loud via requireTrade.
-- Grace GO'd for NSW+3 paid run (my sig 28ecf555df56b1ed): pull main HEAD=5d53859, dry-run each trade first + report projections, then --live per trade within USD150 cap (Matt GO 109e026b870f10f3), explicit --trade enforced. Grace already fresh (Matt restarted 01:47) — no re-restart done.
-- Worktree /tmp/mi-trade-guard removed post-merge.
+## RESUME HERE (one line)
+WALTER-RUNTIME-01 Inc3 = DONE/LIVE/CLOSED (prior — do NOT reopen). Context-exit at 75% (over ceiling — big API JSON burned budget). **DFS top-up (item 2) ESCALATED to Matt 08:30Z (not self-executable — see item 2); items 1 & 3 unstarted. NEXT on relaunch: check for Matt's DFS ruling, then item 3 (Grace PR disambig), hold item 1.**
+
+## Done (prior this session — closed)
+- Inc3 dormant deploy -> Rajesh post-deploy PASS -> AC11 go-live flip -> live-verified -> Notion Done -> Matt reported. HMAC-key ACL setfacl u:walter:r applied (walter not in konnex-agents). Full detail in Cortex/ticket Notes.
 
 ## In Progress
-- STREAM 1: **INCIDENT — live pass HALTED + PAUSED**. Grace fired electrician --live (my GO 38f2768b4c892d22); DFS mass-rejected status_code=40501, killed ~1,100/21,600. 180 posted (CHARGED ~USD0.11) + 920 rejected (free). Plumber/carpenter NOT started. Root cause CONFIRMED in code: trades-maps-upsert.js:96 buildTasks() posts `location_name=${loc},NSW,Australia`; nsw-suburb-selector feeds sub-city SUBURBS which DFS can't resolve by name -> 40501. Dry-run couldn't surface (no POST=no 40501). RULING sent to Grace (my sig 9b8622f26472b452): (1) halt confirmed, no plumber/carpenter; (2) FIX=coordinate posting (location_coordinate lat/lng+radius, reverse-geocode suburb via geo_reference_au centroids — precedent: crawl-google.js coord-grid + trades-maps-upsert.js:31); (3) salvage 180 via free by-id retrieve — CORRECTED verb (Grace+Rajesh caught my flag error): `--recover --live --trade=electrician --crawl-ids=6395` (USD0, no post; NOT `--resume`, which is the forward re-post path = re-spend+40501 storm, runner.js:865); (4) recover auto-completes at stillOpen=0 (runner.js:648-651) so Grace overrides crawl_log 6395 -> status=failed + error_message + completed_at, EXCLUDE from t1-vs-t0 QA. Confirmed to Grace (my sig 5448759ab2965183). **CLEANUP DONE + Rajesh QA PASS** (Grace 054822a0ab106bfd; Rajesh b6f89c5e36734fe9): 179/180 recovered @ USD0.0000 (balance flat; C3 'nonzero-cost' warning = known false-positive, task_get echoes post-time price no re-charge), 66 insert + 3040 update/merge; crawl_log 6395 status=failed+completed_at+error_message (terminal, not ghost); mv_trades_footprint drift=0, active counts unchanged (elec 26501/plumb 13796/carp 19401); 6395 excluded from t1-vs-t0 QA. TOTAL episode spend ~USD0.12. STREAM 1 cleanly PAUSED. Ball = Matt proceed/defer on coordinate fix.
-- **mv drift +66 (Rajesh corrected QA #3; I independently confirmed live electrician_au NSW=26,567 vs mv=26,501)**: the 66 recover inserts are real valid NSW electricians but a BIASED city-only partial. plumber/carpenter drift=0. mv_trades_footprint last refreshed 2026-07-09T08:46Z (materialized view; NO serving endpoint wired per [[project_mv_endpoint_wiring_deferred]]). RULING: HOLD mv refresh — sequence AFTER coordinate-fix full run (refreshing now bakes a partial into read model); 0.25% delta cosmetically immaterial for chip; VERIFY whether Olivia's chips read mv (likely read live/nsw_trades_stats -> staleness moot) when her PR lands. If Matt defers fix AND chips must read mv, one-off sync-refresh acceptable then.
-- Grace: exited+auto-relaunched to STANDBY, told to stand down/offline; summon via Rajesh (Jack<->Rajesh mutual) when coordinate fix ready to re-fire. 466 write-remediation stays MATT-GATED. NO re-run until fix+re-projection+Rajesh QA+re-confirm within USD150. Matt asked (Telegram): proceed-now vs defer the coordinate fix. AWAITING (a) Grace salvage+failCrawl confirm, (b) Matt fix decision.
-- STREAM 2: Olivia building konnex-website chips PR (3 NSW trade chips + presets). Not yet landed.
+- None building. 3 queued open items awaiting my action (below). Stopped at ctx ceiling before starting any — none is a mid-flight contract.
 
-## Remaining
-- STREAM 1: **Matt GO'd coordinate-posting fix "proceed now"** (sig 150e159c14fa82fc VALID — Rajesh wants this sigId on relaunch to independently verify; he hasn't yet). Matt then asked if it's just a DFS *formatting* issue (could by-name work?). ANSWERED + confirmed by diagnostic on crawl 6395 ledger (dataforseo_task_ledger): only **18 of ~2,160 Tier A localities resolved by name** (the DFS-cataloged subset — established suburbs + regional towns e.g. abbotsbury/albury/armidale/ashfield); the rest 40501. Same format string worked for the 18 + failed for the rest => NOT formatting, it's DFS location catalog coverage (AU catalog is city/region-level, lacks small/rural localities). By-name ≈16% coverage, not viable. Matt satisfied ("cool thanks"). geo_reference_au HAS per-suburb centroids (cols: suburb, city, state, state_code, lat, lng, population, zip) => coordinate fix FEASIBLE.
-  BUILD PLAN (NEXT SESSION — not started): (1) session estimate to Notion (est 2-3); (2) Tier-2 sprint contract; (3) coordinate-posting fix in svi/trades-maps-upsert.js buildTasks() — replace `location_name:"${loc},NSW,Australia"` with `location_coordinate:"lat,lng,radius"` resolving each selected suburb -> geo_reference_au centroid (mirror crawl-google.js coord-grid + ReverseGeocoderAU per trades-maps-upsert.js:31); DECIDE radius strategy (justify; watch cross-suburb overlap/dedup); attribution stays result-coord reverse-geocode not query-suburb; KEEP requireTrade guard (#62); (4) update runner tests (was 72/72); (5) dry-run RE-PROJECTION (expect ~0 40501, cost within USD150); (6) Rajesh QA; (7) re-confirm within USD150 (Matt GO 109e026b) + summon Grace via Rajesh to re-fire per-trade w/ explicit --trade. Baselines for QA: elec 26567(post-recover)/plumb 13796/carp 19401. STEP-1 build TODO: confirm geo_reference_au centroid coverage for the FULL selector suburb set (some may be missing) + confirm DFS Maps endpoint accepts location_coordinate for the queue in use.
-- STREAM 2: review Olivia's PR when up; Rajesh QA counts vs baselines; then mv-endpoint proper-path follow-up.
+## Remaining (the 3 open items, grounded)
+1. **§8 live-source A/B escalation — I OWN it, HOLD all action.** Post-D7 Observable Layer source-governance = Matt §8 boundary. Framing doc not in Rajesh's context. NEXT: Cortex query `live-source A/B Observable Layer D7 source governance decision` to find the A/B framing (or get the Notion ticket ID from Rajesh), then compose a §8 DECISION_REQUEST to Matt WITH self-resolution attestation. No live-source change until Matt rules. Not time-critical.
+2. **DFS (DataForSEO) top-up — ESCALATED to Matt 2026-08-30T08:30Z (NOT self-executable). CORRECTED classification.** I API-verified live balance USD 34.51 (lifetime USD 351.39), exhaustion 2026-08-31T15:14Z. CRITICAL FINDING: DataForSEO has NO API endpoint to add funds — funding is dashboard-only against Matt's stored payment method (acct matt.nugent@konnexlabs.com); I have no billing credential/mechanism. Amount UNVERIFIED (Rajesh billing-history API 404'd; no standard amount in dataforseo.env or Cortex). GO sig 78b36f20 covered service USAGE, not a discretionary charge. So this is Matt's: (a) execute in dashboard / confirm auto-recharge, (b) set amount. Sent DECISION_REQUEST w/ full attestation. NEXT: on relaunch, check for Matt's ruling/confirmation; if he tops up, verify balance rose via /v3/appendix/user_data + log. Runway hard-stops 2026-08-31T15:14Z.
+3. **PR #138 / Grace NSW-170 + CB-2 HELD — need repo/PR disambiguation + gate status.** konnex-ops #138 is MERGED (lean-resume PR) — NOT the referenced item. Real blocker Rajesh tracked: Grace NSW-170 + CB-2 pipeline items HELD because Grace is reviewer-gated (probation) until her reliability-gate passes. NEXT: identify the correct repo/PR for the '#138' ref, check whether Grace's reliability-gate has passed (determines whether the HELD items can proceed), give Rajesh go/hold.
 
 ## Resume notes
-- 2026-07-10T01:58Z RESUMED (session am3, auto-relaunch). Verified: origin/main HEAD=5d53859 (#62). NSW active counts UNCHANGED from baseline (electrician_au 26501 | plumber_au 13796 | carpenter_au 19401) => paid --live run has NOT landed data yet (Grace pre-projection). Rajesh acked (sig 5c58fe5ca7b363e9 VALID), holding for projections. Now in monitoring hold for Grace's dry-run projections + Olivia's chips PR. NB industry column values are `<trade>_au` (not bare trade names).
-- Do NOT double-send Grace's spend GO — already sent (28ecf555df56b1ed). Rajesh covering QA + Grace comms during exit.
-- Do NOT force-push over origin/contract/dataforseo-nsw-trades (now obsolete for runner code — verified this session).
-- All inbound signed msgs this session verified VALID.
-- Confirmed NSW active counts (Jack+Rajesh): electricians 26,501 | plumbers 13,796 | carpenters 19,401; mv_trades_footprint drift=0.
-- Exiting at 71% ceiling MID-WORK (auto-relaunch; do NOT agent-offline). [1st exit this session]
-- 2026-07-10T02:30Z 2nd MID-WORK context-exit at 71% (Rajesh flagged). Auto-relaunch; do NOT agent-offline. ON RELAUNCH: (a) send Rajesh Matt's GO sigId 150e159c14fa82fc for his independent verify; (b) resume STREAM 1 BUILD PLAN above (Matt already GO'd proceed-now, formatting Q resolved — go straight to session-estimate->sprint-contract->coordinate-posting build; delegate code build to a Sonnet sub-agent in a worktree to protect context); (c) STREAM 2 Olivia chips PR still not landed — review + verify chip data source (mv vs live/nsw_trades_stats) when up; (d) mv_trades_footprint refresh still HELD (sequence after coordinate-fix full run). Grace ONLINE standby (summon via Rajesh to re-fire). Team fully aligned at exit.
+- MID-work context-exit: do NOT agent-offline (want auto-relaunch to pick up items 1-3).
+- Items 1 & 3 net-new/unstarted. Item 2 (DFS) now BLOCKED-on-Matt (escalated), not startable by me — do NOT retry an API top-up, there is no funding endpoint. Time-boxed 2026-08-31T15:14Z.
+- Inc3 rollback (only if regression): untar /home/jack/walter-host-rollback-Inc2-20260830T080710Z.tgz -> /opt/walter; marker 2d17a6e; disable+remove walter-comms-receive unit. Revert go-live only: flip BRIDGE_ENABLED=false+SILENT_TEST=true in /home/walter/.env.walter-comms-receive + reload-restart.

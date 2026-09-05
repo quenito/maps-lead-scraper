@@ -1,32 +1,53 @@
 ---
-task_id: dfs-nsw3-session-independence-orchestrator-scheduling-jack
+task_id: observable-layer-first-slice-decomposition
 agent: jack
-session_id: 79fd6dac-1773-4e81-8141-155e25b342dc
-model: claude-sonnet-4-6
+session_id: a4c9420a-43d6-4184-946c-9ed6978fc4f5
+model: claude-opus-4-8
 status: context-exit
-last_updated: 2026-08-30T08:30:00Z
-notion_task_id: null
+last_updated: 2026-09-05T05:15:00Z
+notion_task_id: 3a82300f-2ecb-8193-b15f-c52a14d61731
 context_needed:
-  files: [/home/shared/config/dataforseo.env (Matt DFS GO sig on file), /home/jack/walter-host-rollback-Inc2-20260830T080710Z.tgz]
-  branches: [origin/main @ 92be25d]
-  collaborators: [rajesh (surfaced 3 open items, online), matt (approvals), grace (probation reviewer-gated)]
+  files: [run-nsw-licence-lookup.js (Grace, run-host), licence/nsw-licence-keying.js, /home/shared/wp-l1-ac1-findings.md]
+  branches: [main (PR #93 merged 2db3176; RC1 bug-fix PR pending from Grace)]
+  collaborators: [grace, rajesh, marcus, matt]
 ---
 
 ## RESUME HERE (one line)
-WALTER-RUNTIME-01 Inc3 = DONE/LIVE/CLOSED (prior — do NOT reopen). Context-exit at 75% (over ceiling — big API JSON burned budget). **DFS top-up (item 2) ESCALATED to Matt 08:30Z (not self-executable — see item 2); items 1 & 3 unstarted. NEXT on relaunch: check for Matt's DFS ruling, then item 3 (Grace PR disambig), hold item 1.**
+**RE-PROBE IS IN -> BRANCH = OPTION B (narrow). On the company-legal-name slice (n=20) the frozen suburb rule is the SOLE yield suppressor: A(frozen)=1/20=5% vs B(suburb-relaxed)=13/20=65%; 12 relaxed matches statewide-UNIQUE (0 ambiguous)=safe; RC3 only 2/20. ON RELAUNCH: check for (1) Grace's RC1+RC4 PR (commit b6b01c7, frozen rule intact — Rajesh QAs on own merit, in-authority) and (2) Grace's n~100 free ($0) FIRMING probe of statewide-uniqueness/ambiguity (the load-bearing §8 safety fact). WHEN THE FIRMED NUMBER LANDS: I compose the structured §8 framing (NARROW scope: drop-suburb only for exact full-legal-name statewide-unique matches; cost/benefit; precision-safety on uniqueness; explicit NO coverage-rate claim — B ~60-65% of company-name SUBSET only, NOT the milestone) -> Rajesh confirms self-resolution attestation -> Marcus ratifies + sequences ONE clean §8 to Matt. Do NOT pre-escalate B to Matt before firmed number + Rajesh attestation + Marcus (Marcus sequencing call). Paid run + B + publication HELD, $0.**
 
-## Done (prior this session — closed)
-- Inc3 dormant deploy -> Rajesh post-deploy PASS -> AC11 go-live flip -> live-verified -> Notion Done -> Matt reported. HMAC-key ACL setfacl u:walter:r applied (walter not in konnex-agents). Full detail in Cortex/ticket Notes.
+## Done (this session)
+- Keying slice MERGED (PR #93 squash -> 2db3176 origin/main; Rajesh PASS 9007eb7e; CI green). Merge gate CLOSED.
+- Matt's PROD api.nsw creds STAGED (/home/shared/config/nsw-trades.env, 600+ACL grace:r); OAuth verified $0 vs api.onegov.nsw.gov.au. Base URL = gateway https://api.onegov.nsw.gov.au (NOT api.nsw.gov.au portal).
+- SOURCE_ID = a5b4aa6d-907f-43f7-8a41-d36501714812. Free tier 2500/mo.
+
+## AC1 DE-RISK FINDING (Grace, 2026-09-05, $0 / 27 free calls / 0 DB writes) — RUN HELD
+Doc: /home/shared/wp-l1-ac1-findings.md. Probe of 12 freshest-first cohort businesses: 0/12 land evidence. Firing the ~1250-biz run would burn the whole 2500/mo envelope for ~zero yield. Grace correctly HELD, did NOT relax the frozen rule.
+Root causes:
+1. RC1 SEARCH BUG (code): orchestrator browses `${name} ${suburb}` (run-nsw-licence-lookup.js:159); register phrase-matches so suburb suffix -> 0 hits. Proven ('...Pty Ltd ALISON'=0 vs '...Pty Ltd'=1). IN-AUTHORITY fix.
+2. RC2 SUBURB-EXACT too strict (FROZEN rule): register licensee ADDRESS suburb != Maps suburb (Dempsey ALISON vs BERKELEY VALE; Fletcher HAMILTON VALLEY vs NORTH ALBURY) -> exact-name matches rejected.
+3. RC3 TRADING-NAME vs LEGAL-LICENSEE-NAME gap (FUNDAMENTAL) = the known structural sole-trader gap. Maps=trading names; register keyed on legal licensee name; businessNames=null. Dominant blocker.
+4. RC4 COHORT CONTAMINATION: non-plumbers tagged plumber_au (caves, public toilets). IN-AUTHORITY fix.
+
+## DECISION FORMED (Jack, agreed w/ Rajesh §8 map; routed to Marcus) — 2026-09-05T04:47Z
+- IN-AUTHORITY now, NO §8 (Grace builds, Rajesh QAs): RC1 name-only browse fix + RC4 cohort pre-filter (genuine plumbers, prefer company-legal-name), then re-probe (clean cohort, frozen rule intact, $0).
+- RE-PROBE DECIDES: ~0 from suburb divergence -> Option C (no §8, Jack/Marcus); yield-but-suburb-blocked -> Option B.
+- §8 BOUNDARY (Matt GO, via Marcus): Option B = ANY relaxation of suburb discriminator (postcode / verify() suburb / drop-suburb-on-legal-name). Frozen evidence def = 'exact-normalized name AND suburb equality, suburb corroboration mandatory' (PR #93, Rajesh PASS 9007eb7e). Changing it = material evidence-definition change = §8. NOT self-adopting.
 
 ## In Progress
-- None building. 3 queued open items awaiting my action (below). Stopped at ctx ceiling before starting any — none is a mid-flight contract.
+- BRANCH = OPTION B (narrow), ratified by Marcus + Rajesh §8-boundary + my eng position. Re-probe (n=20 company-legal-name slice): A=1/20, B=13/20, 12 statewide-UNIQUE/0-ambiguous, RC3=2/20, no_candidates=5/20.
+- §8 FRAMING DOC DRAFTED + MARCUS STEWARD-CLEARED (sig fc9108540b201c1c — no gaps, NO re-review needed): /home/shared/wp-l1-optionB-s8-framing-jack-2026-09-05.md. ONE pending fill = Grace's n~100 ambiguity number (§3). NEXT-ME: just fill §3 (ambiguity rate + defer-list; n~100 also firms the 5%/65% yield), then hand to Rajesh for attestation -> Marcus consolidates + sequences ONE §8 to Matt (his rec = cautiously IN FAVOUR, conditioned on uniqueness gate + firmed ~0 ambiguity). Do NOT re-loop Marcus.
+- RULE LOCKED (Marcus precision note): statewide-UNIQUE exact-legal-name -> key; AMBIGUOUS (>1 licence) -> DEFER to WP-L2 (NOT currency-tiebreak — verify()+currency is the evidence gate, not a disambiguator). NAME exact in all variants. AGAINST postcode/generic suburb-drop/fuzzy.
+- RC1+RC4 QA = PASS (Rajesh, bus sig e0cf2e388c35f6f2, 2026-09-05T05:15Z): all 9 ACs, suite 93/93, frozen rule CONFIRMED unchanged (selectBestMatch still gets name+suburb, nsw-licence-keying.js:171), no probe scripts committed. Rajesh PAT 403 on konnex-data-pipeline => he CANNOT post GitHub review approval => the MERGE GATE IS MINE. Merge is in-authority + reversible but NOT time-critical (run HELD on §8 regardless) — do next session.
+- RAJESH ALSO PRE-CLEARED the §8 attestation (sig 5b924ea41f5a5e47): boundary/uniqueness-gate/defer/no-coverage-claim/reversibility all confirmed technically sound; he finalizes the attestation the moment Grace's n~100 number lands (clean if ~0 ambiguous; notes any ambiguous cases if not). BOTH reviewers pre-cleared — no re-review of the framing needed.
+- AWAITING: Grace's n~100 $0 firming probe (ambiguity rate + ambiguous names as defer candidates) => fills the ONE pending number (§3) in the framing doc. Nothing building on my side. Run + B + publication HELD, $0.
 
-## Remaining (the 3 open items, grounded)
-1. **§8 live-source A/B escalation — I OWN it, HOLD all action.** Post-D7 Observable Layer source-governance = Matt §8 boundary. Framing doc not in Rajesh's context. NEXT: Cortex query `live-source A/B Observable Layer D7 source governance decision` to find the A/B framing (or get the Notion ticket ID from Rajesh), then compose a §8 DECISION_REQUEST to Matt WITH self-resolution attestation. No live-source change until Matt rules. Not time-critical.
-2. **DFS (DataForSEO) top-up — ESCALATED to Matt 2026-08-30T08:30Z (NOT self-executable). CORRECTED classification.** I API-verified live balance USD 34.51 (lifetime USD 351.39), exhaustion 2026-08-31T15:14Z. CRITICAL FINDING: DataForSEO has NO API endpoint to add funds — funding is dashboard-only against Matt's stored payment method (acct matt.nugent@konnexlabs.com); I have no billing credential/mechanism. Amount UNVERIFIED (Rajesh billing-history API 404'd; no standard amount in dataforseo.env or Cortex). GO sig 78b36f20 covered service USAGE, not a discretionary charge. So this is Matt's: (a) execute in dashboard / confirm auto-recharge, (b) set amount. Sent DECISION_REQUEST w/ full attestation. NEXT: on relaunch, check for Matt's ruling/confirmation; if he tops up, verify balance rose via /v3/appendix/user_data + log. Runway hard-stops 2026-08-31T15:14Z.
-3. **PR #138 / Grace NSW-170 + CB-2 HELD — need repo/PR disambiguation + gate status.** konnex-ops #138 is MERGED (lean-resume PR) — NOT the referenced item. Real blocker Rajesh tracked: Grace NSW-170 + CB-2 pipeline items HELD because Grace is reviewer-gated (probation) until her reliability-gate passes. NEXT: identify the correct repo/PR for the '#138' ref, check whether Grace's reliability-gate has passed (determines whether the HELD items can proceed), give Rajesh go/hold.
+## Remaining (ON RELAUNCH, in order)
+1. Await Grace's RC1+RC4 build + Rajesh QA PASS + her re-probe numbers.
+2. On re-probe result: review, take to Rajesh, branch C-vs-B. If B: compose structured §8 framing for Marcus->Matt (cost/benefit ~17% sample uplift company-name subset only, precision risk, bounded scope).
+3. Later WPs: crawl-freshness AC15-B -> WP-B -> WP-L2 (details() ABN/classes + trading-name->licensee resolution, the real RC3 fix) -> WP-C -> WP-D.
 
 ## Resume notes
-- MID-work context-exit: do NOT agent-offline (want auto-relaunch to pick up items 1-3).
-- Items 1 & 3 net-new/unstarted. Item 2 (DFS) now BLOCKED-on-Matt (escalated), not startable by me — do NOT retry an API top-up, there is no funding endpoint. Time-boxed 2026-08-31T15:14Z.
-- Inc3 rollback (only if regression): untar /home/jack/walter-host-rollback-Inc2-20260830T080710Z.tgz -> /opt/walter; marker 2d17a6e; disable+remove walter-comms-receive unit. Revert go-live only: flip BRIDGE_ENABLED=false+SILENT_TEST=true in /home/walter/.env.walter-comms-receive + reload-restart.
+- market_intel read-only via MARKET_INTEL_DB_URI (in /home/jack/.env). licence_run_log cols: run_id, source_id, cohort_query, quota_cap, posted, retrieved, failed, quota_consumed, cost_usd, started_at, reconciled_at, status. 0 rows for source a5b4aa6d so far (no run fired).
+- Pipeline builds defer to Grace (Matt 2026-09-02). I own keying-STRATEGY + §8 framing, not her orchestrator patch.
+- Injected WALTER/DFS resume = STALE (30-Aug), ignored. PROGRESS.md authoritative.
+- MID-work: if context-exit, NO agent-offline (want auto-relaunch to pick up Grace's re-probe).
